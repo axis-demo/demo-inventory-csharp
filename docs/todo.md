@@ -1,0 +1,470 @@
+## Risk Verification
+- [x] 🔴 **TODO-RISK-001**: Document missing authentication/authorization implementation - add code examples for JWT bearer token validation in middleware
+- [x] 🔴 **TODO-RISK-002**: Verify input validation coverage - add validation for string length limits, numeric ranges, and special character handling in all DTOs
+- [x] ⚠️ **TODO-RISK-003**: Document CORS misconfiguration - `AllowAnyOrigin()` with `AllowAnyMethod()` and `AllowAnyHeader()` in Program.cs line 32-36 needs restriction
+- [x] ⚠️ **TODO-RISK-004**: Add request size limits and timeout configuration - missing `MaxRequestBodySize` and request timeout settings
+- [x] 📝 **TODO-RISK-005**: Document SQL injection prevention strategy - verify parameterized queries in EF Core LINQ usage across ProductService, OrderService, CategoryService
+- [x] 📝 **TODO-RISK-006**: Add sensitive data exposure mitigation - document password/token handling and PII protection in logging (RequestLoggingMiddleware logs full query strings)
+- [x] 🔴 **TODO-RISK-007**: Implement optimistic concurrency control - add `RowVersion` timestamp to Product, Order, Category models for conflict detection
+- [x] 🔴 **TODO-RISK-008**: Document race condition in stock adjustment - OrderService.CreateAsync() and ProductService.AdjustStockAsync() lack transaction isolation level specification
+- [x] ⚠️ **TODO-RISK-009**: Add database constraints validation - verify unique constraints on SKU (exists in DbContext line 19) and OrderNumber (line 31) are enforced at database level
+- [x] ⚠️ **TODO-RISK-010**: Document inventory overselling prevention - add test cases for concurrent order placement scenarios in ProductServiceTests
+- [x] 📝 **TODO-RISK-011**: Add soft delete implementation - currently hard deletes in DeleteAsync() methods prevent audit trail and data recovery
+- [x] 🔴 **TODO-RISK-012**: Implement pagination on list endpoints - GetAllAsync() in ProductService, OrderService, CategoryService return unbounded results
+- [x] ⚠️ **TODO-RISK-013**: Add database indexing strategy - document missing indexes on CategoryId (Product.cs line 42), OrderId (OrderLine.cs), and search fields (Name, SKU)
+- [x] ⚠️ **TODO-RISK-014**: Document N+1 query risks - SearchAsync() in ProductService uses `.ToLower().Contains()` which cannot be translated to SQL and loads all products into memory
+- [x] 📝 **TODO-RISK-015**: Add caching strategy documentation - no caching for frequently accessed data (categories, low-stock products, search results)
+- [x] 🔴 **TODO-RISK-016**: Implement global exception handling middleware - currently only try-catch in controllers; missing centralized error handling for unhandled exceptions
+- [x] ⚠️ **TODO-RISK-017**: Add health check endpoint - missing `/health` endpoint for load balancers and monitoring systems (required for production deployment)
+- [x] 📝 **TODO-RISK-018**: Document database migration strategy - in-memory database (Program.cs line 23) must be replaced with persistent database (SQL Server/PostgreSQL) with migration scripts before production
+
+## Decisions Verification
+- [x] 🔴 **TODO-DEC-001**: Create ADR-023 for Slug Generation Strategy - Document the decision to auto-generate URL-friendly slugs for categories (see `CategoryService.cs` line 48: `slug = request.Slug ?? request.Name.ToLower().Replace(" ", "-")`)
+- [x] 🔴 **TODO-DEC-002**: Create ADR-024 for Order Number Generation - Document the static counter-based order numbering strategy (see `OrderService.cs` line 11: `private static int _orderCounter = 1000` and line 60: `$"ORD-{Interlocked.Increment(ref _orderCounter):D6}"`)
+- [x] 🔴 **TODO-DEC-003**: Create ADR-025 for Soft Delete vs Hard Delete - Document why hard delete is used instead of soft deletes with IsActive flags (see `ProductService.cs` line 165 and `CategoryService.cs` line 85)
+- [x] 🔴 **TODO-DEC-004**: Create ADR-026 for Computed Properties - Document the decision to use computed properties (e.g., `IsLowStock`, `LineTotal`, `ProductCount`) instead of stored columns (see `Product.cs` line 52, `OrderLine.cs` line 73, `Category.cs` line 27)
+- [x] ⚠️ **TODO-DEC-005**: Create ADR-027 for Search Implementation - Document full-text search strategy using LINQ Contains() instead of database full-text search (see `ProductService.cs` line 48-56)
+- [x] ⚠️ **TODO-DEC-006**: Create ADR-028 for Order Status Lifecycle - Document the OrderStatus enum design and valid state transitions (see `Order.cs` line 8-15)
+- [x] ⚠️ **TODO-DEC-007**: Create ADR-029 for Decimal Precision - Document why `decimal(18,2)` is used for prices and `decimal(10,2)` for weights (see `Product.cs` line 20, 26, 40)
+- [x] 📝 **TODO-DEC-008**: Create ADR-030 for Category Deletion Constraints - Document the decision to prevent deletion of non-empty categories (see `CategoryService.cs` line 82-83)
+- [x] 🔴 **TODO-TECH-001**: Document why Guid is used for all primary keys instead of auto-incrementing integers (see `Product.cs` line 8, `Order.cs` line 18, `Category.cs` line 7)
+- [x] 🔴 **TODO-TECH-002**: Document the decision to use `string.Empty` as default for required string properties instead of null (see `Product.cs` line 13, `Order.cs` line 24)
+- [x] ⚠️ **TODO-TECH-003**: Document why `Interlocked.Increment()` is used for thread-safe order counter instead of database sequences (see `OrderService.cs` line 60)
+- [x] ⚠️ **TODO-TECH-004**: Document the choice of `Stopwatch` for request timing in middleware instead of built-in ASP.NET Core timing (see `RequestLoggingMiddleware.cs` line 20)
+- [x] ⚠️ **TODO-TECH-005**: Document why `NullLogger` is used in tests instead of mocking ILogger (see `ProductServiceTests.cs` line 26)
+- [x] 📝 **TODO-TECH-006**: Document the decision to use `[Produces("application/json")]` attribute on all controllers (see `ProductsController.cs` line 8)
+- [x] 🔴 **TODO-PATTERN-001**: Document the Service Locator pattern usage in Program.cs for database seeding (see `Program.cs` line 44-48: `app.Services.CreateScope()`)
+- [x] 🔴 **TODO-PATTERN-002**: Document the Repository pattern absence - explain why DbContext is used directly in services instead of repository abstraction (see `ProductService.cs` line 20: `_db.Products.Include()`)
+- [x] ⚠️ **TODO-PATTERN-003**: Document the Specification pattern absence - explain why LINQ queries are embedded in service methods instead of using specifications (see `ProductService.cs` line 48-56)
+- [x] ⚠️ **TODO-PATTERN-004**: Document the Unit of Work pattern usage through EF Core DbContext (see `ProductService.cs` line 110: `await _db.SaveChangesAsync()`)
+- [x] ⚠️ **TODO-PATTERN-005**: Document the Factory pattern for DTO mapping - explain why static MapToDto methods are used (see `ProductService.cs` line 177-180)
+- [x] ⚠️ **TODO-PATTERN-006**: Document the Decorator pattern absence - explain why cross-cutting concerns are handled via middleware instead of decorators (see `RequestLoggingMiddleware.cs`)
+- [x] 📝 **TODO-PATTERN-007**: Document the Active Record pattern usage in domain models (see `Product.cs` line 54-61: `UpdateStock()` method)
+- [x] 🔴 **TODO-API-001**: Document the decision to use PATCH for status updates instead of PUT (see `OrdersController.cs` line 68: `[HttpPatch("{id:guid}/status")]`)
+- [x] ⚠️ **TODO-API-002**: Document why custom action routes are used (e.g., `/stock`, `/search`, `/low-stock`) instead of query parameters for all filtering (see `ProductsController.cs` line 60, 75, 85)
+- [x] ⚠️ **TODO-API-003**: Document the decision to return 409 Conflict for duplicate SKU instead of 400 Bad Request (see `ProductsController.cs` line 105)
+- [x] ⚠️ **TODO-API-004**: Document why `CreatedAtAction` is used for POST responses instead of returning 201 with Location header only (see `ProductsController.cs` line 104)
+- [x] 📝 **TODO-API-005**: Document the decision to include Cost field in ProductDto response (security/business logic implications) (see `ProductDto.cs` line 6)
+- [x] 🔴 **TODO-DATA-001**: Document the decision to use explicit `Include()` for all relationships instead of lazy loading or explicit loading on demand (see `ProductService.cs` line 20)
+- [x] ⚠️ **TODO-DATA-002**: Document why `FirstOrDefaultAsync()` is used instead of `SingleOrDefaultAsync()` for ID lookups (see `ProductService.cs` line 31)
+- [x] ⚠️ **TODO-DATA-003**: Document the decision to use `FindAsync()` for single entity lookups in some methods but `FirstOrDefaultAsync()` in others (see `ProductService.cs` line 127 vs line 31)
+- [x] ⚠️ **TODO-DATA-004**: Document the decision to reload related entities after SaveChangesAsync (see `ProductService.cs` line 111: `await _db.Entry(product).Reference(p => p.Category).LoadAsync()`)
+- [x] 📝 **TODO-DATA-005**: Document why `ToListAsync()` is called before `Select()` in some queries instead of projecting in the query (see `ProductService.cs` line 25)
+- [x] 🔴 **TODO-TEST-001**: Document why only service layer tests exist - explain the decision to skip controller and integration tests (see `ProductServiceTests.cs`)
+- [x] ⚠️ **TODO-TEST-002**: Document the decision to use `IDisposable` pattern for test cleanup instead of `IAsyncLifetime` (see `ProductServiceTests.cs` line 13)
+- [x] ⚠️ **TODO-TEST-003**: Document why `Guid.NewGuid().ToString()` is used for in-memory database names instead of a fixed name (see `ProductServiceTests.cs` line 20)
+- [x] 📝 **TODO-TEST-004**: Document the decision to test only happy path and exception cases, not edge cases like boundary values (see `ProductServiceTests.cs`)
+- [x] 🔴 **TODO-VAL-001**: Document why category validation is done in service layer instead of using a custom validation attribute (see `ProductService.cs` line 87-89)
+- [x] ⚠️ **TODO-VAL-002**: Document the decision to validate stock availability before order creation instead of using database constraints (see `OrderService.cs` line 44-48)
+- [x] ⚠️ **TODO-VAL-003**: Document why duplicate name checking is done for categories but not enforced with unique constraint (see `CategoryService.cs` line 45)
+- [x] 📝 **TODO-VAL-004**: Document the decision to allow empty order lines list validation in controller instead of service (see `OrderService.cs` line 41)
+- [x] 🔴 **TODO-ERROR-001**: Document why `InvalidOperationException` is used for all business logic errors instead of custom exception types (see `ProductService.cs` line 88, `OrderService.cs` line 44)
+- [x] ⚠️ **TODO-ERROR-002**: Document the decision to catch exceptions at controller level instead of using global exception handler middleware (see `ProductsController.cs` line 105-110)
+- [x] ⚠️ **TODO-ERROR-003**: Document why some error messages include technical details (e.g., SKU values) while others are generic (see `ProductService.cs` line 88 vs `OrderService.cs` line 45)
+- [x] 📝 **TODO-ERROR-004**: Document the decision to return error details in response body instead of using ProblemDetails standard (see `ProductsController.cs` line 110)
+- [x] 🔴 **TODO-PERF-001**: Document the N+1 query problem mitigation strategy and why eager loading is preferred (see ADR-019 but needs expansion on performance implications)
+- [x] ⚠️ **TODO-PERF-002**: Document the decision to load all products before filtering in search instead of using database-side filtering (see `ProductService.cs` line 48-56)
+- [x] ⚠️ **TODO-PERF-003**: Document why pagination is not implemented for list endpoints (see `ProductsController.cs` line 24, `OrdersController.cs` line 25)
+- [x] ⚠️ **TODO-PERF-004**: Document the decision to use in-memory database instead of caching layer for performance (see ADR-002)
+- [x] 📝 **TODO-PERF-005**: Document the performance implications of computing `IsLowStock` on every product retrieval instead of caching (see `Product.cs` line 52)
+- [x] 🔴 **TODO-SEC-001**: Document why Cost field is exposed in ProductDto API response (potential business logic leak) (see `ProductDto.cs` line 6)
+- [x] 🔴 **TODO-SEC-002**: Document the decision to allow unrestricted CORS (see ADR-011 but needs security implications section)
+- [x] ⚠️ **TODO-SEC-003**: Document why no authentication/authorization is implemented (see `Program.cs` - no auth middleware)
+- [x] ⚠️ **TODO-SEC-004**: Document the decision to use Guid for IDs instead of sequential integers (security through obscurity vs. actual security) (see `Product.cs` line 8)
+- [x] 📝 **TODO-SEC-005**: Document why no input sanitization is done for string fields (see `ProductService.cs` line 95: `request.Name` used directly)
+- [x] 🔴 **TODO-TRADEOFF-001**: Document the trade-off between simplicity (in-memory DB) and data persistence (see ADR-002 but needs expansion)
+- [x] ⚠️ **TODO-TRADEOFF-002**: Document the trade-off between explicit DTOs (boilerplate) and API stability (see ADR-006 but needs quantification)
+- [x] ⚠️ **TODO-TRADEOFF-003**: Document the trade-off between eager loading (memory usage) and preventing N+1 queries (see ADR-019)
+- [x] ⚠️ **TODO-TRADEOFF-004**: Document the trade-off between exception-based error handling (familiar) and Result<T> pattern (explicit) (see ADR-008)
+- [x] ⚠️ **TODO-TRADEOFF-005**: Document the trade-off between console logging (simplicity) and structured logging (observability) (see ADR-009)
+- [x] 📝 **TODO-TRADEOFF-006**: Document the trade-off between service layer validation and database constraints (see `ProductService.cs` line 87-89)
+- [x] 🔴 **TODO-FUTURE-001**: Document migration path from in-memory database to SQL Server/PostgreSQL (see ADR-002 Future Considerations)
+- [x] ⚠️ **TODO-FUTURE-002**: Document the plan for implementing pagination when dataset grows (see `ProductsController.cs` line 24)
+- [x] ⚠️ **TODO-FUTURE-003**: Document the plan for implementing caching strategy (Redis) for high-traffic scenarios (see ADR-009 Future Considerations)
+- [x] 📝 **TODO-FUTURE-004**: Document the plan for implementing audit logging for product/order changes (see `ProductService.cs` line 113)
+- [x] 🔴 **TODO-QUALITY-001**: Document why no abstraction layer exists between controllers and services (tight coupling) (see `ProductsController.cs` line 17)
+- [x] ⚠️ **TODO-QUALITY-002**: Document the decision to use expression-bodied members for computed properties instead of traditional properties (see `Product.cs` line 52)
+- [x] ⚠️ **TODO-QUALITY-003**: Document why no logging exists in service layer for read operations (see `ProductService.cs` line 19-27)
+- [x] ⚠️ **TODO-QUALITY-004**: Document the decision to use static methods for DTO mapping instead of instance methods or extension methods (see `ProductService.cs` line 177)
+- [x] 📝 **TODO-QUALITY-005**: Document why no constants are defined for magic strings (e.g., "InventoryDb", "api/v1") (see `Program.cs` line 19)
+- [x] 🔴 **TODO-DOC-001**: Add evidence references to ADR-003 for the specific line numbers in ProductsController, ProductService, and InventoryDbContext showing layered architecture
+- [x] ⚠️ **TODO-DOC-002**: Add evidence references to ADR-006 for all DTO files and their usage in controllers (currently only ProductDto.cs is referenced)
+- [x] ⚠️ **TODO-DOC-003**: Add evidence references to ADR-010 for OrderServiceTests and CategoryServiceTests (currently only ProductServiceTests.cs is documented)
+- [x] ⚠️ **TODO-DOC-004**: Add evidence references to ADR-013 for Category-Product relationship configuration (currently only Product-Category is documented)
+- [x] 📝 **TODO-DOC-005**: Add evidence references to ADR-020 for middleware registration order and its implications (see `Program.cs` line 53-57)
+
+## Glossary Verification
+- [x] 🔴 **TODO-GLOSS-001**: Add "SKU (Stock Keeping Unit)" definition with code reference
+- [x] 🔴 **TODO-GLOSS-002**: Add "Reorder Point" definition with business logic
+- [x] 🔴 **TODO-GLOSS-003**: Add "OrderLine" entity definition
+- [x] 🔴 **TODO-GLOSS-004**: Add "Slug" definition for URL-friendly identifiers
+- [x] 🔴 **TODO-GLOSS-005**: Add "OrderStatus" enum definition
+- [x] ⚠️ **TODO-GLOSS-006**: Update "Product" definition to include Cost and Brand properties
+- [x] ⚠️ **TODO-GLOSS-007**: Add "IsLowStock" computed property definition
+- [x] 🔴 **TODO-GLOSS-008**: Add "GUID (Globally Unique Identifier)" definition
+- [x] 🔴 **TODO-GLOSS-009**: Add "Interlocked" threading pattern definition
+- [x] 🔴 **TODO-GLOSS-010**: Add "MapToDto" pattern definition
+- [x] ⚠️ **TODO-GLOSS-011**: Add "Record" (C# record type) definition
+- [x] ⚠️ **TODO-GLOSS-012**: Add "Include" and "ThenInclude" EF Core methods
+- [x] 📝 **TODO-GLOSS-013**: Add "Decimal(18,2)" column type definition
+- [x] 🔴 **TODO-GLOSS-014**: Add "409 Conflict" HTTP status code definition
+- [x] 🔴 **TODO-GLOSS-015**: Add "CreatedAtAction" response pattern definition
+- [x] 🔴 **TODO-GLOSS-016**: Add "ProducesResponseType" attribute definition
+- [x] ⚠️ **TODO-GLOSS-017**: Add "FromQuery" and "FromBody" binding definitions
+- [x] ⚠️ **TODO-GLOSS-018**: Add "ModelState" validation definition
+- [x] 🔴 **TODO-GLOSS-019**: Add "GetBySku" method definition
+- [x] 🔴 **TODO-GLOSS-020**: Add "GetLowStock" endpoint definition
+- [x] 🔴 **TODO-GLOSS-021**: Add "AdjustStock" method definition
+- [x] 🔴 **TODO-GLOSS-022**: Add "UpdateStatus" method for orders
+- [x] ⚠️ **TODO-GLOSS-023**: Add "MaxLength" attribute definition
+- [x] ⚠️ **TODO-GLOSS-024**: Add "Range" attribute definition
+- [x] 📝 **TODO-GLOSS-025**: Add "DeleteBehavior" constraint definition
+
+## Code Verification
+- [x] 🔴 **TODO-CODE-001**: Add XML documentation comments to `ProductService.GetAllAsync()` at [`ProductService.cs:19`](src/InventoryApi/Services/ProductService.cs:19) - document activeOnly parameter behavior
+- [x] 🔴 **TODO-CODE-002**: Add XML documentation to `ProductService.SearchAsync()` at [`ProductService.cs:47`](src/InventoryApi/Services/ProductService.cs:47) - document search field coverage (Name, SKU, Description, Brand)
+- [x] 🔴 **TODO-CODE-003**: Add XML documentation to `ProductService.AdjustStockAsync()` at [`ProductService.cs:153`](src/InventoryApi/Services/ProductService.cs:153) - document stock adjustment validation logic
+- [x] 🔴 **TODO-CODE-004**: Add XML documentation to `OrderService.CreateAsync()` at [`OrderService.cs:36`](src/InventoryApi/Services/OrderService.cs:36) - document stock deduction and order number generation
+- [x] 🔴 **TODO-CODE-005**: Add XML documentation to `CategoryService.DeleteAsync()` at [`CategoryService.cs:68`](src/InventoryApi/Services/CategoryService.cs:68) - document cascade delete prevention
+- [x] 🔴 **TODO-CODE-006**: Document `Product.UpdateStock()` method at [`Product.cs:54`](src/InventoryApi/Models/Product.cs:54) with exception documentation
+- [x] 🔴 **TODO-CODE-007**: Document `Order.RecalculateTotal()` method at [`Order.cs:43`](src/InventoryApi/Models/Order.cs:43) with calculation details
+- [x] 🔴 **TODO-CODE-008**: Add XML documentation to `InventoryDbContext.OnModelCreating()` at [`InventoryDbContext.cs:15`](src/InventoryApi/Data/InventoryDbContext.cs:15) - document delete behaviors
+- [x] 🔴 **TODO-CODE-009**: Add XML documentation to `RequestLoggingMiddleware.InvokeAsync()` at [`RequestLoggingMiddleware.cs:16`](src/InventoryApi/Middleware/RequestLoggingMiddleware.cs:16) - document correlation ID generation
+- [x] ⚠️ **TODO-CODE-010**: Document `ProductService.MapToDto()` private method at [`ProductService.cs:168`](src/InventoryApi/Services/ProductService.cs:168) - explain DTO mapping strategy
+- [x] ⚠️ **TODO-CODE-011**: Document `CategoryService.MapToDto()` private method at [`CategoryService.cs:87`](src/InventoryApi/Services/CategoryService.cs:87) - explain product count calculation
+- [x] ⚠️ **TODO-CODE-012**: Document `OrderService.MapToDto()` private method at [`OrderService.cs:114`](src/InventoryApi/Services/OrderService.cs:114) - explain line item mapping
+- [x] ⚠️ **TODO-CODE-013**: Add remarks to `ProductsController.Create()` at [`ProductsController.cs:91`](src/InventoryApi/Controllers/ProductsController.cs:91) - document 409 Conflict response
+- [x] ⚠️ **TODO-CODE-014**: Add remarks to `OrdersController.Create()` at [`OrdersController.cs:45`](src/InventoryApi/Controllers/OrdersController.cs:45) - document stock deduction side effects
+- [x] ⚠️ **TODO-CODE-015**: Document `CategoriesController.Update()` at [`CategoriesController.cs:68`](src/InventoryApi/Controllers/CategoriesController.cs:68) - add exception handling documentation
+- [x] 📝 **TODO-CODE-016**: Add parameter documentation to `ProductService.GetByCategoryAsync()` at [`ProductService.cs:67`](src/InventoryApi/Services/ProductService.cs:67) - document categoryId filtering
+- [x] 📝 **TODO-CODE-017**: Document return type behavior for nullable methods in `ProductService` - clarify when null is returned
+- [x] 📝 **TODO-CODE-018**: Add documentation for `Interlocked.Increment()` usage in `OrderService` at [`OrderService.cs:62`](src/InventoryApi/Services/OrderService.cs:62) - explain thread safety
+- [x] 🔴 **TODO-CODE-019**: Add class-level XML documentation to `Product` entity at [`Product.cs:5`](src/InventoryApi/Models/Product.cs:5) - document business rules
+- [x] 🔴 **TODO-CODE-020**: Add class-level XML documentation to `Order` entity at [`Order.cs:17`](src/InventoryApi/Models/Order.cs:17) - document order lifecycle
+- [x] 🔴 **TODO-CODE-021**: Add class-level XML documentation to `OrderLine` entity at [`Order.cs:50`](src/InventoryApi/Models/Order.cs:50) - document denormalization strategy
+- [x] 🔴 **TODO-CODE-022**: Add class-level XML documentation to `ProductService` at [`ProductService.cs:8`](src/InventoryApi/Services/ProductService.cs:8) - document service responsibilities
+- [x] 🔴 **TODO-CODE-023**: Add class-level XML documentation to `OrderService` at [`OrderService.cs:8`](src/InventoryApi/Services/OrderService.cs:8) - document stock management
+- [x] 🔴 **TODO-CODE-024**: Add class-level XML documentation to `CategoryService` at [`CategoryService.cs:8`](src/InventoryApi/Services/CategoryService.cs:8) - document cascade delete prevention
+- [x] 🔴 **TODO-CODE-025**: Add class-level XML documentation to `RequestLoggingMiddleware` at [`RequestLoggingMiddleware.cs:5`](src/InventoryApi/Middleware/RequestLoggingMiddleware.cs:5) - document correlation ID pattern
+- [x] 🔴 **TODO-CODE-026**: Add class-level XML documentation to `InventoryDbContext` at [`InventoryDbContext.cs:6`](src/InventoryApi/Data/InventoryDbContext.cs:6) - document seeding strategy
+- [x] ⚠️ **TODO-CODE-027**: Document `OrderStatus` enum at [`Order.cs:7`](src/InventoryApi/Models/Order.cs:7) - explain state transitions
+- [x] ⚠️ **TODO-CODE-028**: Document all DTO records in `ProductDto.cs` - add purpose and usage documentation
+- [x] ⚠️ **TODO-CODE-029**: Document `CreateProductRequest` validation rules at [`ProductDto.cs:24`](src/InventoryApi/DTOs/ProductDto.cs:24)
+- [x] ⚠️ **TODO-CODE-030**: Document `CreateOrderRequest` validation rules at [`ProductDto.cs:73`](src/InventoryApi/DTOs/ProductDto.cs:73)
+- [x] 📝 **TODO-CODE-031**: Add remarks to `ProductsController` class at [`ProductsController.cs:8`](src/InventoryApi/Controllers/ProductsController.cs:8) - document API versioning
+- [x] 📝 **TODO-CODE-032**: Add remarks to `OrdersController` class at [`OrdersController.cs:8`](src/InventoryApi/Controllers/OrdersController.cs:8) - document order processing flow
+- [x] 📝 **TODO-CODE-033**: Add remarks to `CategoriesController` class at [`CategoriesController.cs:8`](src/InventoryApi/Controllers/CategoriesController.cs:8) - document category constraints
+- [x] 📝 **TODO-CODE-034**: Document `Category` entity constraints at [`Category.cs:5`](src/InventoryApi/Models/Category.cs:5) - explain slug generation
+- [x] 🔴 **TODO-CODE-035**: Document async/await pattern usage - verify all I/O operations use async methods
+- [x] 🔴 **TODO-CODE-036**: Document null-coalescing pattern at [`ProductService.cs:47`](src/InventoryApi/Services/ProductService.cs:47) - explain empty query handling
+- [x] 🔴 **TODO-CODE-037**: Document null-conditional operator usage at [`ProductService.cs:172`](src/InventoryApi/Services/ProductService.cs:172) - explain Category?.Name pattern
+- [x] 🔴 **TODO-CODE-038**: Document DTO record type pattern - explain immutability benefits
+- [x] 🔴 **TODO-CODE-039**: Document exception-based validation pattern - explain InvalidOperationException usage
+- [x] 🔴 **TODO-CODE-040**: Document LINQ query composition pattern at [`ProductService.cs:19`](src/InventoryApi/Services/ProductService.cs:19) - explain deferred execution
+- [x] 🔴 **TODO-CODE-041**: Document Include/ThenInclude pattern for eager loading - verify all navigation properties are loaded
+- [x] ⚠️ **TODO-CODE-042**: Document structured logging pattern with named parameters - verify consistency across services
+- [x] ⚠️ **TODO-CODE-043**: Document correlation ID pattern at [`RequestLoggingMiddleware.cs:16`](src/InventoryApi/Middleware/RequestLoggingMiddleware.cs:16) - explain 8-character ID generation
+- [x] ⚠️ **TODO-CODE-044**: Document scoped service lifetime pattern - explain request isolation
+- [x] ⚠️ **TODO-CODE-045**: Document DTO mapping strategy - explain why MapToDto is private
+- [x] 📝 **TODO-CODE-046**: Document naming conventions for private fields (underscore prefix) - verify consistency
+- [x] 📝 **TODO-CODE-047**: Document parameter naming conventions (camelCase) - verify consistency
+- [x] 📝 **TODO-CODE-048**: Document class naming conventions (PascalCase) - verify consistency
+- [x] 🔴 **TODO-CODE-049**: Document order creation flow at [`OrderService.cs:36`](src/InventoryApi/Services/OrderService.cs:36) - verify stock validation before deduction
+- [x] 🔴 **TODO-CODE-050**: Document stock deduction logic at [`OrderService.cs:80`](src/InventoryApi/Services/OrderService.cs:80) - explain negative quantity handling
+- [x] 🔴 **TODO-CODE-051**: Document product creation validation at [`ProductService.cs:87`](src/InventoryApi/Services/ProductService.cs:87) - verify SKU uniqueness check
+- [x] 🔴 **TODO-CODE-052**: Document category deletion prevention at [`CategoryService.cs:75`](src/InventoryApi/Services/CategoryService.cs:75) - verify product count check
+- [x] 🔴 **TODO-CODE-053**: Document stock adjustment validation at [`Product.cs:54`](src/InventoryApi/Models/Product.cs:54) - verify insufficient stock error message
+- [x] 🔴 **TODO-CODE-054**: Document order number generation at [`OrderService.cs:62`](src/InventoryApi/Services/OrderService.cs:62) - explain format string and counter
+- [x] ⚠️ **TODO-CODE-055**: Document database seeding flow at [`InventoryDbContext.cs:42`](src/InventoryApi/Data/InventoryDbContext.cs:42) - verify idempotency check
+- [x] ⚠️ **TODO-CODE-056**: Document request logging flow at [`RequestLoggingMiddleware.cs:16`](src/InventoryApi/Middleware/RequestLoggingMiddleware.cs:16) - verify finally block execution
+- [x] ⚠️ **TODO-CODE-057**: Document error handling in controllers - verify consistent error response format
+- [x] ⚠️ **TODO-CODE-058**: Document ModelState validation at [`ProductsController.cs:94`](src/InventoryApi/Controllers/ProductsController.cs:94) - verify validation attribute enforcement
+- [x] 📝 **TODO-CODE-059**: Document search query composition at [`ProductService.cs:47`](src/InventoryApi/Services/ProductService.cs:47) - explain multi-field search logic
+- [x] 📝 **TODO-CODE-060**: Document low stock detection at [`ProductService.cs:82`](src/InventoryApi/Services/ProductService.cs:82) - explain reorder point comparison
+- [x] 📝 **TODO-CODE-061**: Document category slug generation at [`CategoryService.cs:41`](src/InventoryApi/Services/CategoryService.cs:41) - explain transformation rules
+- [x] 📝 **TODO-CODE-062**: Document order status update at [`OrderService.cs:104`](src/InventoryApi/Services/OrderService.cs:104) - verify no stock impact
+- [x] 📝 **TODO-CODE-063**: Document product update at [`ProductService.cs:115`](src/InventoryApi/Services/ProductService.cs:115) - verify category validation
+- [x] 🔴 **TODO-CODE-064**: Document all InvalidOperationException messages - verify consistency and clarity
+- [x] 🔴 **TODO-CODE-065**: Document SKU uniqueness validation at [`ProductService.cs:87`](src/InventoryApi/Services/ProductService.cs:87) - verify error message
+- [x] 🔴 **TODO-CODE-066**: Document category existence validation at [`ProductService.cs:89`](src/InventoryApi/Services/ProductService.cs:89) - verify error message
+- [x] 🔴 **TODO-CODE-067**: Document stock availability validation at [`OrderService.cs:56`](src/InventoryApi/Services/OrderService.cs:56) - verify error message format
+- [x] 🔴 **TODO-CODE-068**: Document insufficient stock error at [`Product.cs:57`](src/InventoryApi/Models/Product.cs:57) - verify error message clarity
+- [x] ⚠️ **TODO-CODE-069**: Document category name uniqueness validation at [`CategoryService.cs:37`](src/InventoryApi/Services/CategoryService.cs:37) - verify error message
+- [x] ⚠️ **TODO-CODE-070**: Document empty order lines validation at [`OrderService.cs:41`](src/InventoryApi/Services/OrderService.cs:41) - verify error message
+- [x] ⚠️ **TODO-CODE-071**: Document HTTP status code mapping - verify 409 Conflict for business rule violations
+- [x] ⚠️ **TODO-CODE-072**: Document HTTP status code mapping - verify 400 Bad Request for validation errors
+- [x] 📝 **TODO-CODE-073**: Document validation attribute usage in DTOs - verify [Required], [MaxLength], [Range] consistency
+- [x] 📝 **TODO-CODE-074**: Document null reference handling - verify null-coalescing operators
+- [x] 📝 **TODO-CODE-075**: Document exception logging - verify LogWarning usage in controllers
+- [x] 🔴 **TODO-CODE-076**: Verify test isolation in `ProductServiceTests` - confirm unique database per test at [`ProductServiceTests.cs:20`](tests/InventoryApi.Tests/ProductServiceTests.cs:20)
+- [x] 🔴 **TODO-CODE-077**: Document test naming convention - verify Arrange-Act-Assert pattern
+- [x] 🔴 **TODO-CODE-078**: Verify FluentAssertions usage - document assertion methods used (Should().HaveCount(), Should().ThrowAsync(), etc.)
+- [x] ⚠️ **TODO-CODE-079**: Add missing test cases for `CategoryService` - create CategoryServiceTests.cs
+- [x] ⚠️ **TODO-CODE-080**: Add missing test cases for `OrderService` - create OrderServiceTests.cs
+- [x] ⚠️ **TODO-CODE-081**: Add missing test cases for controllers - create ProductsControllerTests.cs
+- [x] 📝 **TODO-CODE-082**: Document test database setup - explain NullLogger usage
+- [x] 📝 **TODO-CODE-083**: Document exception testing pattern - verify WithMessage() wildcard matching
+- [x] 🔴 **TODO-CODE-084**: Add section documenting database schema and relationships - create entity relationship diagram
+- [x] 🔴 **TODO-CODE-085**: Add section documenting API error response format - document error response structure
+- [x] 🔴 **TODO-CODE-086**: Add section documenting request/response examples - include JSON examples for all endpoints
+- [x] ⚠️ **TODO-CODE-087**: Add section documenting performance considerations - document N+1 query prevention
+- [x] ⚠️ **TODO-CODE-088**: Add section documenting concurrency handling - document Interlocked usage
+- [x] 📝 **TODO-CODE-089**: Add section documenting future enhancements - document potential improvements
+
+## Dataflow Verification
+- [x] 🔴 **TODO-FLOW-001**: Document `OrderLineDto` schema with all fields and computed properties (LineTotal calculation)
+- [x] 🔴 **TODO-FLOW-002**: Add detailed field constraints documentation for `UpdateOrderStatusRequest` record
+- [x] ⚠️ **TODO-FLOW-003**: Document default values for Product model fields (IsActive=true, ReorderPoint=10, CreatedAt=UtcNow)
+- [x] ⚠️ **TODO-FLOW-004**: Add validation rules matrix for all DTO records (MaxLength, Range, Required attributes)
+- [x] 📝 **TODO-FLOW-005**: Document Category.IsActive field behavior and its impact on product visibility
+- [x] 📝 **TODO-FLOW-006**: Add documentation for OrderStatus enum transitions and valid state changes
+- [x] 📝 **TODO-FLOW-007**: Document Product.IsLowStock computed property calculation logic
+- [x] 📝 **TODO-FLOW-008**: Add schema for seed data initialization in InventoryDbContext.SeedData()
+- [x] 🔴 **TODO-FLOW-009**: Document GET /api/v1/products/sku/{sku} endpoint response codes and error scenarios
+- [x] 🔴 **TODO-FLOW-010**: Add detailed documentation for GET /api/v1/products/search query parameter handling (empty string behavior)
+- [x] ⚠️ **TODO-FLOW-011**: Document GET /api/v1/products/category/{categoryId} filtering logic for inactive products
+- [x] ⚠️ **TODO-FLOW-012**: Add response examples for GET /api/v1/products/low-stock with multiple products
+- [x] 📝 **TODO-FLOW-013**: Document POST /api/v1/products/{id}/stock endpoint behavior with negative quantities
+- [x] 📝 **TODO-FLOW-014**: Add documentation for Location header format in 201 Created responses
+- [x] 🔴 **TODO-FLOW-015**: Document category slug generation algorithm (space to dash, ampersand to "and")
+- [x] ⚠️ **TODO-FLOW-016**: Add detailed error response for DELETE /api/v1/categories/{id} when products exist
+- [x] 📝 **TODO-FLOW-017**: Document PUT /api/v1/categories/{id} slug update behavior (preserve if not provided)
+- [x] 📝 **TODO-FLOW-018**: Add validation for category name uniqueness enforcement in CreateAsync
+- [x] 🔴 **TODO-FLOW-019**: Document order number generation format (ORD-XXXXXX) and counter initialization
+- [x] 🔴 **TODO-FLOW-020**: Add detailed stock validation sequence in POST /api/v1/orders before deduction
+- [x] ⚠️ **TODO-FLOW-021**: Document PATCH /api/v1/orders/{id}/status enum parsing with case-insensitive handling
+- [x] ⚠️ **TODO-FLOW-022**: Add error response examples for insufficient stock scenarios in order creation
+- [x] 📝 **TODO-FLOW-023**: Document OrderLine product snapshot behavior (Name, SKU, UnitPrice captured at order time)
+- [x] 🔴 **TODO-FLOW-024**: Document MapToDto() method for ProductDto including null handling for Category
+- [x] 🔴 **TODO-FLOW-025**: Add detailed transformation logic for OrderDto with nested OrderLineDto collection
+- [x] ⚠️ **TODO-FLOW-026**: Document CategoryDto ProductCount calculation from Products collection
+- [x] ⚠️ **TODO-FLOW-027**: Add transformation pipeline for OrderStatus enum to string conversion
+- [x] 📝 **TODO-FLOW-028**: Document explicit loading pattern in CreateAsync() for category relationships
+- [x] 📝 **TODO-FLOW-029**: Add documentation for search query normalization (ToLower() case-insensitive matching)
+- [x] 📝 **TODO-FLOW-030**: Document null coalescing behavior in search filters for optional fields
+- [x] 🔴 **TODO-FLOW-031**: Document unique index constraints on Product.SKU and Order.OrderNumber
+- [x] 🔴 **TODO-FLOW-032**: Add foreign key cascade behavior documentation (OrderLine → Order: Cascade, OrderLine → Product: Restrict)
+- [x] ⚠️ **TODO-FLOW-033**: Document Product → Category relationship with DeleteBehavior.Restrict
+- [x] ⚠️ **TODO-FLOW-034**: Add documentation for in-memory database seeding strategy and timing
+- [x] 📝 **TODO-FLOW-035**: Document EF Core change tracking behavior in UpdateAsync() methods
+- [x] 📝 **TODO-FLOW-036**: Add documentation for SaveChangesAsync() atomicity guarantees in order creation
+- [x] 🔴 **TODO-FLOW-037**: Document InvalidOperationException scenarios for SKU duplicate detection
+- [x] 🔴 **TODO-FLOW-038**: Add error message templates for stock insufficiency errors with available/requested quantities
+- [x] ⚠️ **TODO-FLOW-039**: Document category deletion validation preventing orphaned products
+- [x] 📝 **TODO-FLOW-040**: Add documentation for ModelState validation error responses (400 Bad Request format)
+- [x] 📝 **TODO-FLOW-041**: Document exception handling in controllers with try-catch patterns
+- [x] 🔴 **TODO-FLOW-042**: Document correlation ID generation and propagation through X-Correlation-ID header
+- [x] ⚠️ **TODO-FLOW-043**: Add detailed logging event documentation for all service methods with parameter values
+- [x] 📝 **TODO-FLOW-044**: Document request/response timing calculation in RequestLoggingMiddleware
+- [x] 📝 **TODO-FLOW-045**: Add log level determination logic based on HTTP status codes (500+: Error, 400+: Warning, else: Info)
+
+## Architecture Verification
+- [x] 🔴 **TODO-ARCH-001**: Add deployment architecture diagram showing containerization (Docker/Kubernetes) options at [`Program.cs`](src/InventoryApi/Program.cs:1)
+- [x] 🔴 **TODO-ARCH-002**: Create system context diagram (C4 Model Level 1) showing external systems and actors
+- [x] 🔴 **TODO-ARCH-003**: Document actual startup sequence with timing metrics from [`Program.cs`](src/InventoryApi/Program.cs:33-48)
+- [x] ⚠️ **TODO-ARCH-004**: Add runtime environment configuration details (development vs production settings)
+- [x] ⚠️ **TODO-ARCH-005**: Document application lifecycle hooks (startup, shutdown, graceful termination)
+- [x] ⚠️ **TODO-ARCH-006**: Add health check endpoint specification and implementation plan
+- [x] 📝 **TODO-ARCH-007**: Document .NET 9 specific features used (records, nullable reference types, implicit usings)
+- [x] 📝 **TODO-ARCH-008**: Add performance baseline metrics (startup time, memory footprint, request latency)
+- [x] 📝 **TODO-ARCH-009**: Document thread safety guarantees for in-memory database operations
+- [x] 📝 **TODO-ARCH-010**: Add diagram showing request/response lifecycle through middleware pipeline
+- [x] 📝 **TODO-ARCH-011**: Document CORS policy rationale and production recommendations
+- [x] 📝 **TODO-ARCH-012**: Add section on nullable reference types usage and null-safety patterns
+- [x] 🔴 **TODO-API-001**: Verify all controller action signatures match documentation at [`ProductsController.cs`](src/InventoryApi/Controllers/ProductsController.cs:1-162)
+- [x] 🔴 **TODO-API-002**: Document actual HTTP status codes returned by each endpoint (verify 201 vs 200 for POST)
+- [x] 🔴 **TODO-API-003**: Add OpenAPI/Swagger schema validation for all DTOs at [`ProductDto.cs`](src/InventoryApi/DTOs/ProductDto.cs:1-106)
+- [x] 🔴 **TODO-API-004**: Document Location header format for 201 Created responses
+- [x] ⚠️ **TODO-API-005**: Add API versioning strategy documentation (currently v1 hardcoded)
+- [x] ⚠️ **TODO-API-006**: Document error response format consistency across all controllers
+- [x] ⚠️ **TODO-API-007**: Add request/response examples for all 22 endpoints in Swagger
+- [x] ⚠️ **TODO-API-008**: Document query parameter validation rules (e.g., activeOnly boolean)
+- [x] ⚠️ **TODO-API-009**: Add content negotiation strategy (currently JSON only)
+- [x] ⚠️ **TODO-API-010**: Document request size limits and timeout configurations
+- [x] 📝 **TODO-API-011**: Add API deprecation strategy and backward compatibility plan
+- [x] 📝 **TODO-API-012**: Document HATEOAS link generation strategy (if planned)
+- [x] 📝 **TODO-API-013**: Add API rate limiting specification (currently missing)
+- [x] 📝 **TODO-API-014**: Document API documentation generation process and versioning
+- [x] 🔴 **TODO-SVC-001**: Document transaction boundaries in [`OrderService.CreateAsync()`](src/InventoryApi/Services/OrderService.cs:37-77) - verify atomicity
+- [x] 🔴 **TODO-SVC-002**: Verify stock deduction logic handles concurrent requests at [`OrderService.cs`](src/InventoryApi/Services/OrderService.cs:60-75)
+- [x] 🔴 **TODO-SVC-003**: Document order number generation thread-safety at [`OrderService.cs`](src/InventoryApi/Services/OrderService.cs:13)
+- [x] 🔴 **TODO-SVC-004**: Add service interface definitions (currently using concrete classes)
+- [x] ⚠️ **TODO-SVC-005**: Document ProductService search performance characteristics at [`ProductService.SearchAsync()`](src/InventoryApi/Services/ProductService.cs:48-56)
+- [x] ⚠️ **TODO-SVC-006**: Add caching strategy for frequently accessed products
+- [x] ⚠️ **TODO-SVC-007**: Document CategoryService slug generation algorithm at [`CategoryService.cs`](src/InventoryApi/Services/CategoryService.cs:45)
+- [x] ⚠️ **TODO-SVC-008**: Add service method complexity analysis (Big O notation)
+- [x] ⚠️ **TODO-SVC-009**: Document exception handling strategy across all services
+- [x] ⚠️ **TODO-SVC-010**: Add service layer unit test coverage metrics
+- [x] 📝 **TODO-SVC-011**: Document service method logging levels and log message format
+- [x] 📝 **TODO-SVC-012**: Add service method timeout specifications
+- [x] 📝 **TODO-SVC-013**: Document service method idempotency guarantees
+- [x] 📝 **TODO-SVC-014**: Add service method retry strategy (if applicable)
+- [x] 📝 **TODO-SVC-015**: Document service method authorization requirements
+- [x] 📝 **TODO-SVC-016**: Add service method audit logging requirements
+- [x] 🔴 **TODO-DATA-001**: Document EF Core configuration details at [`InventoryDbContext.OnModelCreating()`](src/InventoryApi/Data/InventoryDbContext.cs:15-42)
+- [x] 🔴 **TODO-DATA-002**: Verify foreign key cascade/restrict behavior matches business rules
+- [x] 🔴 **TODO-DATA-003**: Document unique constraint enforcement at [`InventoryDbContext.cs`](src/InventoryApi/Data/InventoryDbContext.cs:18,25)
+- [x] 🔴 **TODO-DATA-004**: Add migration strategy documentation (currently no migrations)
+- [x] 🔴 **TODO-DATA-005**: Document seed data loading sequence at [`InventoryDbContext.SeedData()`](src/InventoryApi/Data/InventoryDbContext.cs:44-73)
+- [x] ⚠️ **TODO-DATA-006**: Add database index strategy for query optimization
+- [x] ⚠️ **TODO-DATA-007**: Document query optimization patterns (Include, Select, AsNoTracking usage)
+- [x] ⚠️ **TODO-DATA-008**: Add N+1 query prevention strategy documentation
+- [x] ⚠️ **TODO-DATA-009**: Document change tracking behavior and performance implications
+- [x] ⚠️ **TODO-DATA-010**: Add connection pooling configuration (when migrating from in-memory)
+- [x] 📝 **TODO-DATA-011**: Document database schema versioning strategy
+- [x] 📝 **TODO-DATA-012**: Add data backup and recovery procedures
+- [x] 📝 **TODO-DATA-013**: Document data retention policies
+- [x] 📝 **TODO-DATA-014**: Add database monitoring and alerting strategy
+- [x] 🔴 **TODO-MODEL-001**: Verify Product model constraints at [`Product.cs`](src/InventoryApi/Models/Product.cs:1-64)
+- [x] 🔴 **TODO-MODEL-002**: Document Order status state machine transitions at [`Order.cs`](src/InventoryApi/Models/Order.cs:6-11)
+- [x] 🔴 **TODO-MODEL-003**: Verify OrderLine computed property calculation at [`Order.cs`](src/InventoryApi/Models/Order.cs:79)
+- [x] ⚠️ **TODO-MODEL-004**: Add domain event definitions (e.g., ProductCreated, OrderPlaced)
+- [x] ⚠️ **TODO-MODEL-005**: Document value object patterns (if applicable)
+- [x] ⚠️ **TODO-MODEL-006**: Add aggregate root definitions and boundaries
+- [x] ⚠️ **TODO-MODEL-007**: Document invariant enforcement in domain models
+- [x] 📝 **TODO-MODEL-008**: Add model validation rules documentation
+- [x] 📝 **TODO-MODEL-009**: Document timestamp management (CreatedAt, UpdatedAt) strategy
+- [x] 📝 **TODO-MODEL-010**: Add soft delete strategy (if planned)
+- [x] 📝 **TODO-MODEL-011**: Document model versioning strategy
+- [x] 📝 **TODO-MODEL-012**: Add model serialization/deserialization strategy
+- [x] 🔴 **TODO-MIDDLEWARE-001**: Verify correlation ID generation at [`RequestLoggingMiddleware.cs`](src/InventoryApi/Middleware/RequestLoggingMiddleware.cs:18)
+- [x] 🔴 **TODO-MIDDLEWARE-002**: Document middleware execution order in [`Program.cs`](src/InventoryApi/Program.cs:41-57)
+- [x] ⚠️ **TODO-MIDDLEWARE-003**: Add exception handling middleware specification
+- [x] ⚠️ **TODO-MIDDLEWARE-004**: Document request/response logging format and retention
+- [x] ⚠️ **TODO-MIDDLEWARE-005**: Add performance monitoring middleware specification
+- [x] 📝 **TODO-MIDDLEWARE-006**: Document custom header handling strategy
+- [x] 📝 **TODO-MIDDLEWARE-007**: Add middleware testing strategy
+- [x] 📝 **TODO-MIDDLEWARE-008**: Document middleware dependency injection patterns
+- [x] 📝 **TODO-MIDDLEWARE-009**: Add middleware configuration management
+- [x] 📝 **TODO-MIDDLEWARE-010**: Document middleware error handling and recovery
+- [x] 🔴 **TODO-TEST-001**: Verify test database isolation at [`ProductServiceTests.cs`](tests/InventoryApi.Tests/ProductServiceTests.cs:15-28)
+- [x] 🔴 **TODO-TEST-002**: Document test data setup and teardown strategy
+- [x] 🔴 **TODO-TEST-003**: Add missing OrderService unit tests
+- [x] 🔴 **TODO-TEST-004**: Add missing CategoryService unit tests
+- [x] ⚠️ **TODO-TEST-005**: Create integration tests for all controllers
+- [x] ⚠️ **TODO-TEST-006**: Add API contract testing strategy
+- [x] ⚠️ **TODO-TEST-007**: Document test coverage targets and metrics
+- [x] ⚠️ **TODO-TEST-008**: Add performance/load testing strategy
+- [x] ⚠️ **TODO-TEST-009**: Document test data generation strategy (Bogus/Faker)
+- [x] 📝 **TODO-TEST-010**: Add end-to-end testing strategy
+- [x] 📝 **TODO-TEST-011**: Document test environment configuration
+- [x] 📝 **TODO-TEST-012**: Add test result reporting and CI/CD integration
+- [x] 🔴 **TODO-DI-001**: Document service registration at [`Program.cs`](src/InventoryApi/Program.cs:21-29)
+- [x] 🔴 **TODO-DI-002**: Verify service lifetime correctness (Scoped vs Singleton vs Transient)
+- [x] ⚠️ **TODO-DI-003**: Add configuration management strategy (appsettings.json)
+- [x] ⚠️ **TODO-DI-004**: Document environment-specific configuration handling
+- [x] ⚠️ **TODO-DI-005**: Add secrets management strategy (user secrets, Key Vault)
+- [x] 📝 **TODO-DI-006**: Document dependency resolution order and initialization
+- [x] 📝 **TODO-DI-007**: Add service factory pattern documentation (if used)
+- [x] 📝 **TODO-DI-008**: Document circular dependency prevention strategy
+- [x] 🔴 **TODO-SEC-001**: Add authentication implementation plan (JWT, OAuth2)
+- [x] 🔴 **TODO-SEC-002**: Add authorization implementation plan (role-based, policy-based)
+- [x] 🔴 **TODO-SEC-003**: Document input validation strategy across all layers
+- [x] ⚠️ **TODO-SEC-004**: Add HTTPS enforcement specification
+- [x] ⚠️ **TODO-SEC-005**: Document CORS policy production configuration
+- [x] ⚠️ **TODO-SEC-006**: Add rate limiting implementation plan
+- [x] ⚠️ **TODO-SEC-007**: Document SQL injection prevention (verify EF Core parameterization)
+- [x] 📝 **TODO-SEC-008**: Add XSS prevention strategy
+- [x] 📝 **TODO-SEC-009**: Document CSRF protection strategy
+- [x] 📝 **TODO-SEC-010**: Add security audit logging requirements
+- [x] 🔴 **TODO-PERF-001**: Document in-memory database limitations and migration path
+- [x] 🔴 **TODO-PERF-002**: Add database migration strategy (SQL Server/PostgreSQL)
+- [x] ⚠️ **TODO-PERF-003**: Document caching strategy (Redis, distributed cache)
+- [x] ⚠️ **TODO-PERF-004**: Add pagination implementation for list endpoints
+- [x] ⚠️ **TODO-PERF-005**: Document query optimization for search functionality
+- [x] ⚠️ **TODO-PERF-006**: Add load testing methodology and acceptance criteria
+- [x] 📝 **TODO-PERF-007**: Document horizontal scaling strategy
+- [x] 📝 **TODO-PERF-008**: Add database replication strategy
+- [x] 📝 **TODO-PERF-009**: Document async operation strategy (message queues)
+- [x] 📝 **TODO-PERF-010**: Add monitoring and observability strategy
+- [x] 🔴 **TODO-DOC-001**: Add sequence diagrams for order creation flow
+- [x] 🔴 **TODO-DOC-002**: Add sequence diagrams for product search flow
+- [x] ⚠️ **TODO-DOC-003**: Create C4 Model diagrams (Context, Container, Component, Code)
+- [x] ⚠️ **TODO-DOC-004**: Add API request/response examples for all 22 endpoints
+- [x] ⚠️ **TODO-DOC-005**: Document common error scenarios and troubleshooting
+- [x] 📝 **TODO-DOC-006**: Add architecture decision records (ADRs)
+- [x] 📝 **TODO-DOC-007**: Create deployment runbook
+- [x] 📝 **TODO-DOC-008**: Add troubleshooting guide for common issues
+- [x] 🔴 **TODO-QUALITY-001**: Document coding standards and conventions
+- [x] ⚠️ **TODO-QUALITY-002**: Add code review checklist
+- [x] ⚠️ **TODO-QUALITY-003**: Document naming conventions for entities, DTOs, services
+- [x] 📝 **TODO-QUALITY-004**: Add static code analysis rules (SonarQube, StyleCop)
+- [x] 📝 **TODO-QUALITY-005**: Document refactoring strategy
+- [x] 📝 **TODO-QUALITY-006**: Add technical debt tracking process
+- [x] 🔴 **TODO-OPS-001**: Create Docker containerization specification
+- [x] 🔴 **TODO-OPS-002**: Document Kubernetes deployment manifests
+- [x] ⚠️ **TODO-OPS-003**: Add CI/CD pipeline specification (GitHub Actions, Azure DevOps)
+- [x] ⚠️ **TODO-OPS-004**: Document environment promotion strategy (Dev → Staging → Prod)
+- [x] ⚠️ **TODO-OPS-005**: Add rollback and disaster recovery procedures
+- [x] 📝 **TODO-OPS-006**: Document monitoring and alerting setup
+- [x] 📝 **TODO-OPS-007**: Add log aggregation strategy (ELK, Application Insights)
+- [x] 📝 **TODO-OPS-008**: Document incident response procedures
+- [x] 🔴 **TODO-INTEGRATION-001**: Document payment gateway integration (if planned)
+- [x] ⚠️ **TODO-INTEGRATION-002**: Add email notification service integration
+- [x] ⚠️ **TODO-INTEGRATION-003**: Document inventory sync with external systems
+- [x] 📝 **TODO-INTEGRATION-004**: Add webhook strategy for order events
+- [x] 📝 **TODO-INTEGRATION-005**: Document third-party API integration patterns
+- [x] 📝 **TODO-INTEGRATION-006**: Add data import/export strategy
+- [x] 📝 **TODO-FUTURE-001**: Document microservices migration strategy
+- [x] 📝 **TODO-FUTURE-002**: Add GraphQL endpoint specification
+- [x] 📝 **TODO-FUTURE-003**: Document real-time updates strategy (SignalR)
+- [x] 📝 **TODO-FUTURE-004**: Add mobile API considerations
+- [x] 📝 **TODO-FUTURE-005**: Document multi-tenancy strategy (if planned)
+- [x] 📝 **TODO-FUTURE-006**: Add internationalization (i18n) strategy
+- [x] 📝 **TODO-FUTURE-007**: Document analytics and reporting strategy
+- [x] 📝 **TODO-FUTURE-008**: Add machine learning integration points (recommendations, forecasting)
+
+## Structure Verification
+- [x] 🔴 **TODO-STRUCT-001**: Document missing `appsettings.json` and `appsettings.Development.json` configuration files in `/src/InventoryApi/`
+- [x] 🔴 **TODO-STRUCT-002**: Verify and document actual file sizes in data directory (suppliers.json: 428KB, transactions-history.json: 8.9MB) match documentation claims
+- [x] ⚠️ **TODO-STRUCT-003**: Add explanation for why data files (suppliers.json, transactions-history.json) are not used in current seeding logic
+- [x] ⚠️ **TODO-STRUCT-004**: Document missing `.gitignore` entries for `appsettings.Development.json` usage pattern
+- [x] 📝 **TODO-STRUCT-005**: Add rationale for in-memory database choice over persistent storage in architecture section
+- [x] 📝 **TODO-STRUCT-006**: Document the `public partial class Program { }` declaration purpose in Program.cs
+- [x] 📝 **TODO-STRUCT-007**: Clarify why test project uses separate in-memory database instances per test
+- [x] 📝 **TODO-STRUCT-008**: Add explanation of Guid.NewGuid() default values in entity constructors
+- [x] 🔴 **TODO-STRUCT-009**: Create complete import dependency graph showing all `using` statements across modules
+- [x] 🔴 **TODO-STRUCT-010**: Document circular dependency prevention strategy (verify no cycles exist between Services, Models, Data)
+- [x] ⚠️ **TODO-STRUCT-011**: Map DTOs to their corresponding Model entities (ProductDto ↔ Product, OrderDto ↔ Order, etc.)
+- [x] ⚠️ **TODO-STRUCT-012**: Document why ProductService depends on ILogger<ProductService> but not on other services
+- [x] ⚠️ **TODO-STRUCT-013**: Verify and document all DbSet<T> properties in InventoryDbContext match actual entity types
+- [x] 📝 **TODO-STRUCT-014**: Add explanation of why OrderService uses static _orderCounter for thread-safe order numbering
+- [x] 📝 **TODO-STRUCT-015**: Document the Include/ThenInclude pattern usage for eager loading in all services
+- [x] 🔴 **TODO-STRUCT-016**: Document complete application startup sequence with timing and initialization order
+- [x] 🔴 **TODO-STRUCT-017**: Add detailed explanation of middleware pipeline order and why RequestLoggingMiddleware is placed before CORS
+- [x] ⚠️ **TODO-STRUCT-018**: Document database seeding logic in InventoryDbContext.SeedData() with all 10 products and 5 categories
+- [x] ⚠️ **TODO-STRUCT-019**: Explain why Swagger is only enabled in Development environment
+- [x] 📝 **TODO-STRUCT-020**: Add documentation for CORS policy configuration (AllowAnyOrigin, AllowAnyMethod, AllowAnyHeader)
+- [x] 📝 **TODO-STRUCT-021**: Document the scope creation pattern for database initialization in Program.cs
+- [x] 🔴 **TODO-STRUCT-022**: Document all configuration sources (appsettings.json, environment variables, hardcoded values)
+- [x] 🔴 **TODO-STRUCT-023**: List all hardcoded configuration values (database name "InventoryDb", API version "v1", ports 5000/5001)
+- [x] ⚠️ **TODO-STRUCT-024**: Add environment-specific configuration differences (Development vs Production)
+- [x] ⚠️ **TODO-STRUCT-025**: Document logging configuration (console provider, log levels, structured logging format)
+- [x] 📝 **TODO-STRUCT-026**: Explain why HTTPS redirection is applied globally in middleware pipeline
+- [x] 📝 **TODO-STRUCT-027**: Document the correlation ID generation strategy (8-char hex from Guid or X-Correlation-ID header)
+- [x] 🔴 **TODO-STRUCT-028**: Verify all 18 API endpoints documented in README match actual controller implementations
+- [x] 🔴 **TODO-STRUCT-029**: Document route attribute pattern `[Route("api/v1/[controller]")]` and how it generates base paths
+- [x] ⚠️ **TODO-STRUCT-030**: Add missing endpoint documentation for `UpdateOrderStatusRequest` record in OrdersController
+- [x] ⚠️ **TODO-STRUCT-031**: Document HTTP status code mappings for all endpoints (201 Created, 204 No Content, 400 Bad Request, 404 Not Found, 409 Conflict)
+- [x] 📝 **TODO-STRUCT-032**: Explain ProducesResponseType attributes and their role in Swagger documentation
+- [x] 📝 **TODO-STRUCT-033**: Document query parameter handling (activeOnly, q, categoryId) and default values
+- [x] 🔴 **TODO-STRUCT-034**: Document all data annotations on entities (Required, MaxLength, Range, Column, Key, ForeignKey)
+- [x] 🔴 **TODO-STRUCT-035**: Verify Product.IsLowStock computed property logic (StockQuantity <= ReorderPoint) is correctly documented
+- [x] ⚠️ **TODO-STRUCT-036**: Document OrderStatus enum values and their lifecycle transitions (Pending → Confirmed → Processing → Shipped → Delivered)
+- [x] ⚠️ **TODO-STRUCT-037**: Explain why OrderLine denormalizes ProductName and ProductSKU instead of relying on Product navigation
+- [x] ⚠️ **TODO-STRUCT-038**: Document decimal precision for Price, Cost, TotalAmount (18,2) and WeightKg (10,2)
+- [x] 📝 **TODO-STRUCT-039**: Add explanation for why Category.IsActive defaults to true but is not used in deletion logic
+- [x] 📝 **TODO-STRUCT-040**: Document timestamp initialization pattern (DateTime.UtcNow) and UpdatedAt update triggers
+- [x] 🔴 **TODO-STRUCT-041**: Document all validation rules in ProductService (SKU uniqueness, category existence, stock bounds)
+- [x] 🔴 **TODO-STRUCT-042**: Verify OrderService stock deduction is atomic and transactional (all-or-nothing semantics)
+- [x] ⚠️ **TODO-STRUCT-043**: Document CategoryService slug generation algorithm (lowercase, space→hyphen, &→and)
+- [x] ⚠️ **TODO-STRUCT-044**: Explain why ProductService.SearchAsync returns all products when query is empty/null
+- [x] 📝 **TODO-STRUCT-045**: Document the MapToDto pattern usage across all services for DTO projection
+- [x] 🔴 **TODO-STRUCT-046**: Document test coverage gaps (missing tests for CategoryService, OrderService, all Controllers)
+- [x] ⚠️ **TODO-STRUCT-047**: Verify ProductServiceTests uses isolated in-memory database per test (Guid.NewGuid().ToString())
+- [x] ⚠️ **TODO-STRUCT-048**: Document xUnit test patterns (Fact, Theory, Arrange-Act-Assert) used in ProductServiceTests
+- [x] 📝 **TODO-STRUCT-049**: Add explanation for why NullLogger<ProductService>.Instance is used in tests instead of Mock<ILogger>
+- [x] 🔴 **TODO-STRUCT-050**: Document build process (dotnet build, dotnet run, dotnet test commands)
+- [x] ⚠️ **TODO-STRUCT-051**: Add deployment considerations (containerization, environment variables, database persistence)
+- [x] 📝 **TODO-STRUCT-052**: Document .NET 9 target framework implications and minimum SDK version requirements
+
